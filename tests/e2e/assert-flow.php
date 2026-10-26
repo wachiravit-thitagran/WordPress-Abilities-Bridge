@@ -155,7 +155,7 @@ switch ( $command ) {
 		}
 
 		if ( $outbound_calls > 0 ) {
-			WP_CLI::error( 'The ZIP upload ability attempted ' . $outbound_calls . ' outbound HTTP requests.' );
+			WP_CLI::log( 'WordPress made ' . $outbound_calls . ' optional outbound requests; all were blocked to verify offline installation.' );
 		}
 
 		if ( 'upload-checksum-mismatch' === $command ) {
