@@ -220,13 +220,15 @@ final class Plugin_Upload_Installer {
 		}
 
 		try {
-			if ( 0 === $zip->numFiles || $zip->numFiles > self::MAX_ZIP_ENTRIES ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native ZipArchive property.
+			$entry_count = $zip->numFiles;
+			if ( 0 === $entry_count || $entry_count > self::MAX_ZIP_ENTRIES ) {
 				return $this->unsafe_archive();
 			}
 
 			$total      = 0;
 			$php_files  = 0;
-			for ( $i = 0; $i < $zip->numFiles; ++$i ) {
+			for ( $i = 0; $i < $entry_count; ++$i ) {
 				$stat = $zip->statIndex( $i );
 				$name = is_array( $stat ) && isset( $stat['name'] ) ? $stat['name'] : '';
 
