@@ -3,7 +3,7 @@
  * Plugin Name: WordPress Abilities Bridge
  * Plugin URI: https://github.com/wachiravit-thitagran/WordPress-Abilities-Bridge
  * Description: Exposes WordPress Core functionality as secure, permission-aware abilities through the native WordPress Abilities API.
- * Version: 0.5.1
+ * Version: 0.5.2
  * Requires at least: 6.9
  * Requires PHP: 7.4
  * Author: Wachiravit Thitagran
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-defined( 'WP_ABILITY_VERSION' ) || define( 'WP_ABILITY_VERSION', '0.5.1' );
+defined( 'WP_ABILITY_VERSION' ) || define( 'WP_ABILITY_VERSION', '0.5.2' );
 
 require_once __DIR__ . '/includes/class-ability-schemas.php';
 require_once __DIR__ . '/includes/class-ability-registrar.php';
@@ -32,6 +32,7 @@ require_once __DIR__ . '/includes/class-package-integrity-verifier.php';
 require_once __DIR__ . '/includes/class-github-self-updater.php';
 require_once __DIR__ . '/includes/class-audit-context.php';
 require_once __DIR__ . '/includes/class-plugin-package-installer.php';
+require_once __DIR__ . '/includes/class-plugin-upload-installer.php';
 require_once __DIR__ . '/includes/class-abilities.php';
 require_once __DIR__ . '/includes/class-plugin-abilities.php';
 require_once __DIR__ . '/includes/class-theme-abilities.php';

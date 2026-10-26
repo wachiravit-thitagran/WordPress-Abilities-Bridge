@@ -43,6 +43,7 @@ final class Plugin_Abilities {
 
 		$this->register_plugin_install();
 		$this->register_plugin_install_package();
+		$this->register_plugin_install_upload();
 		$this->register_plugin_update();
 		$this->register_plugin_auto_updates();
 		$this->register_plugin_bulk_actions();
@@ -148,6 +149,60 @@ final class Plugin_Abilities {
 				'execute_callback'    => array( $this, 'plugin_install_package' ),
 				'permission_callback' => array( $this, 'can_install_plugin_package' ),
 				'meta'                => $this->meta( false, false, false, true ),
+			)
+		);
+	}
+
+
+	/**
+	 * Register the firewall-safe inbound plugin ZIP upload ability.
+	 *
+	 * @return void
+	 */
+	private function register_plugin_install_upload() {
+		Ability_Registrar::register(
+			'wordpress/plugin-install-upload',
+			array(
+				'label'               => __( 'Upload WordPress Plugin ZIP', 'wp-ability' ),
+				'description'         => __( 'Installs or overwrites a plugin from a Base64 ZIP sent in the request without server-side downloads.', 'wp-ability' ),
+				'category'            => 'wordpress-admin',
+				'input_schema'        => array(
+					'type'                 => 'object',
+					'properties'           => array(
+						'plugin_slug'     => array(
+							'type'        => 'string',
+							'minLength'   => 1,
+							'maxLength'   => 100,
+							'pattern'     => '^[a-z0-9][a-z0-9_-]*$',
+							'description' => __( 'Expected plugin ZIP root directory name.', 'wp-ability' ),
+						),
+						'zip_base64'      => array(
+							'type'        => 'string',
+							'minLength'   => 4,
+							'maxLength'   => 16777216,
+							'description' => __( 'Base64-encoded ZIP bytes; maximum decoded size 12 MiB. Not a URL.', 'wp-ability' ),
+						),
+						'expected_sha256' => array(
+							'type'      => 'string',
+							'minLength' => 64,
+							'maxLength' => 64,
+							'pattern'   => '^[a-fA-F0-9]{64}$',
+						),
+						'overwrite'       => array(
+							'type'    => 'boolean',
+							'default' => false,
+						),
+						'activate'        => array(
+							'type'    => 'boolean',
+							'default' => false,
+						),
+					),
+					'required'             => array( 'plugin_slug', 'zip_base64', 'expected_sha256' ),
+					'additionalProperties' => false,
+				),
+				'execute_callback'    => array( $this, 'plugin_install_upload' ),
+				'permission_callback' => array( $this, 'can_install_plugin_package' ),
+				'meta'                => $this->meta( false, false, false, false ),
 			)
 		);
 	}
@@ -602,6 +657,18 @@ final class Plugin_Abilities {
 			$this->plugin_package_installer = new Plugin_Package_Installer();
 		}
 		return $this->plugin_package_installer->install( $input );
+	}
+
+
+	/**
+	 * Install or overwrite a ZIP uploaded in this request.
+	 *
+	 * @param array $input Ability input.
+	 * @return array|\WP_Error
+	 */
+	public function plugin_install_upload( array $input ) {
+		$installer = new Plugin_Upload_Installer();
+		return $installer->install( $input );
 	}
 
 	/**

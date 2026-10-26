@@ -24,6 +24,7 @@ Plugin management is intentionally a thin semantic wrapper over WordPress Core. 
 | `wordpress/plugin-get-information` | `plugins_api( 'plugin_information' )` | `install_plugins` |
 | `wordpress/plugin-install` | WordPress.org metadata + `Plugin_Upgrader::install()` | `install_plugins`, plus `activate_plugins` when requested |
 | `wordpress/plugin-install-package` | `Plugin_Upgrader::install()` for HTTPS ZIPs | `install_plugins`, plus `update_plugins` for overwrite and `activate_plugins` for activation |
+| `wordpress/plugin-install-upload` | Validate inbound Base64 ZIP and SHA-256, then use `Plugin_Upgrader::install()` on the local ZIP | `install_plugins`, plus `update_plugins` for overwrite and `activate_plugins` for activation |
 | `wordpress/plugin-check-updates` | `wp_update_plugins()` + Core update transient | `update_plugins` |
 | `wordpress/plugin-update` | same Core upgrader path used by WordPress Admin AJAX | `update_plugins` |
 | `wordpress/plugin-update-many` | `Plugin_Upgrader::bulk_upgrade()` | `update_plugins` |
@@ -102,6 +103,34 @@ Custom plugin and theme package abilities accept an optional `expected_sha256` v
 ```
 
 When supplied, the bridge hooks WordPress Core's upgrader download step, calculates the downloaded ZIP SHA-256, and refuses installation when the digest does not match. Package extraction, overwrite, and activation remain delegated to Core.
+
+## Firewall-compatible plugin ZIP uploads
+
+Use `wordpress/plugin-install-upload` when the server cannot fetch a release package from GitHub because outbound HTTPS/cURL is blocked.
+The **client** downloads the ZIP and submits its Base64-encoded bytes directly via the authenticated ability call. The server never requests the URL.
+
+Example input (placeholder content):
+
+```json
+{
+  "plugin_slug": "authorizenter-core",
+  "zip_base64": "<base64-encoded ZIP bytes>",
+  "expected_sha256": "<64-character hexadecimal SHA-256 of the exact ZIP>",
+  "overwrite": true,
+  "activate": true
+}
+```
+
+Rules and constraints:
+
+- `install_plugins` capability is always required; overwrites additionally require `update_plugins`, and activation requires `activate_plugins`.
+- `plugin_slug` must match the ZIP's only top-level directory; overwriting `wp-ability` itself through this ability is intentionally unsupported.
+- SHA-256 verification is mandatory. Invalid Base64, incorrect digest, unsafe ZIP paths, symlinks and ZIP bombs are rejected before installation.
+- ZIP is restricted to 12 MiB decoded data, 10,000 entries and 128 MiB expanded content. PHP ZipArchive is required.
+- WordPress Core's `Plugin_Upgrader` is responsible for extraction, replacement and activation. Temporary uploaded files are always cleaned up.
+- JSON/Base64 adds about 33% body size. Server `post_max_size`, proxy body limits and MCP tool request limits may require adjustment; this version does not implement chunking.
+- Treat upload bytes as sensitive operational data: the bridge audit logs input key names, not their values; avoid request-body logging elsewhere.
+- Bootstrap the upgraded WordPress Abilities Bridge through the WordPress Admin ZIP upload UI once, as the new ability cannot install itself.
 
 ## WordPress Core compatibility
 
