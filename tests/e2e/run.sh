@@ -132,6 +132,16 @@ SHA_V1="$(sha256sum "$WWW_DIR/fixture-v1.zip" | awk '{print $1}')"
 "${WP[@]}" eval-file "$REPO_ROOT/tests/e2e/assert-flow.php" delete
 "${WP[@]}" eval-file "$REPO_ROOT/tests/e2e/assert-flow.php" assert-absent
 
+# Inbound-only deployment must work while WordPress outbound HTTP is blocked.
+"${WP[@]}" eval-file "$REPO_ROOT/tests/e2e/assert-flow.php" upload-checksum-mismatch "$WWW_DIR/fixture-v1.zip" false true
+"${WP[@]}" eval-file "$REPO_ROOT/tests/e2e/assert-flow.php" upload "$WWW_DIR/fixture-v1.zip" false true
+"${WP[@]}" eval-file "$REPO_ROOT/tests/e2e/assert-flow.php" assert-version 1.0.0 active
+"${WP[@]}" eval-file "$REPO_ROOT/tests/e2e/assert-flow.php" upload "$WWW_DIR/fixture-v2.zip" true true
+"${WP[@]}" eval-file "$REPO_ROOT/tests/e2e/assert-flow.php" assert-version 2.0.0 active
+"${WP[@]}" eval-file "$REPO_ROOT/tests/e2e/assert-flow.php" deactivate
+"${WP[@]}" eval-file "$REPO_ROOT/tests/e2e/assert-flow.php" delete
+"${WP[@]}" eval-file "$REPO_ROOT/tests/e2e/assert-flow.php" assert-absent
+
 bash "$REPO_ROOT/tests/e2e/theme-run.sh"
 
 echo "PASS: complete single-site plugin and theme management E2E flow"
