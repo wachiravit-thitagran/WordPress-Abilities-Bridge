@@ -53,6 +53,7 @@ switch ( $command ) {
 				'wordpress/plugin-search',
 				'wordpress/plugin-get-information',
 				'wordpress/plugin-install-package',
+				'wordpress/plugin-install-upload',
 				'wordpress/plugin-check-updates',
 				'wordpress/plugin-update',
 				'wordpress/plugin-enable-auto-update',
@@ -115,6 +116,62 @@ switch ( $command ) {
 		WP_CLI::log( wp_json_encode( $result ) );
 		break;
 
+
+
+	case 'upload':
+	case 'upload-checksum-mismatch':
+		$filename = isset( $args[1] ) ? $args[1] : '';
+		$overwrite = isset( $args[2] ) && 'true' === $args[2];
+		$activate  = isset( $args[3] ) && 'true' === $args[3];
+
+		if ( ! is_readable( $filename ) ) {
+			WP_CLI::error( 'Upload fixture ZIP is not readable.' );
+		}
+
+		$bytes = file_get_contents( $filename );
+		if ( false === $bytes ) {
+			WP_CLI::error( 'Cannot read upload fixture ZIP.' );
+		}
+
+		$input = array(
+			'plugin_slug'     => 'wp-ability-e2e-fixture',
+			'zip_base64'      => base64_encode( $bytes ),
+			'expected_sha256' => 'upload-checksum-mismatch' === $command ? str_repeat( '0', 64 ) : hash( 'sha256', $bytes ),
+			'overwrite'       => $overwrite,
+			'activate'        => $activate,
+		);
+
+		// Prevent and detect any outbound HTTP operation while uploading ZIP.
+		$outbound_calls = 0;
+		$block_network  = static function () use ( &$outbound_calls ) {
+			++$outbound_calls;
+			return new WP_Error( 'e2e_outbound_blocked', 'Outbound HTTP intentionally blocked during direct ZIP upload.' );
+		};
+		add_filter( 'pre_http_request', $block_network );
+		try {
+			$result = wp_ability_e2e_ability( 'wordpress/plugin-install-upload' )->execute( $input );
+		} finally {
+			remove_filter( 'pre_http_request', $block_network );
+		}
+
+		if ( $outbound_calls > 0 ) {
+			WP_CLI::error( 'The ZIP upload ability attempted ' . $outbound_calls . ' outbound HTTP requests.' );
+		}
+
+		if ( 'upload-checksum-mismatch' === $command ) {
+			if ( ! is_wp_error( $result ) || 'wp_ability_package_checksum_mismatch' !== $result->get_error_code() ) {
+				WP_CLI::error( 'Inbound ZIP checksum mismatch was not rejected.' );
+			}
+			WP_CLI::success( 'Inbound ZIP checksum mismatch rejected without HTTP access.' );
+			break;
+		}
+
+		$result = wp_ability_e2e_require_success( $result, 'Inbound ZIP upload' );
+		if ( empty( $result['installed'] ) || $plugin_file !== $result['plugin_file'] ) {
+			WP_CLI::error( 'Inbound ZIP upload returned unexpected plugin metadata.' );
+		}
+		WP_CLI::success( 'Inbound plugin ZIP deployed without outbound HTTP access.' );
+		break;
 
 	case 'install-checksum-mismatch':
 		$url    = isset( $args[1] ) ? $args[1] : '';
