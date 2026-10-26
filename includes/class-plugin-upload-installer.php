@@ -168,7 +168,7 @@ final class Plugin_Upload_Installer {
 				return new \WP_Error( 'wp_ability_plugin_upload_target_mismatch', __( 'The resulting plugin does not match the requested slug.', 'wp-ability' ) );
 			}
 
-			wp_clean_plugins_cache( true );
+			wp_clean_plugins_cache( false );
 			$activated = false;
 			if ( $activate ) {
 				$activation = is_callable( $this->activator )
